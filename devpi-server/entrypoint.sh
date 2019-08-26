@@ -12,6 +12,7 @@ defaults() {
         DEVPI_PORT
 }
 
+DEVPI_LISTEN_HOST="0.0.0.0"
 CLIENT_INSTALLED="false"
 KEEP_CLIENT="false"
 
@@ -63,15 +64,14 @@ initialize() {
 
     print ""
     print "=> Initializing devpi-server"
-    devpi-server --restrict-modify root --start --host "$DEVPI_HOST" --port "$DEVPI_PORT" 
-    devpi-server --status
+    devpi-server --restrict-modify root --start --host "$DEVPI_LISTEN_HOST" --port "$DEVPI_PORT" --init $@
+    devpi-server --status --host "$DEVPI_LISTEN_HOST" --port "$DEVPI_PORT" $@
     devpi use "http://$DEVPI_HOST:$DEVPI_PORT"
     devpi login root --password=''
     devpi user -m root password="${DEVPI_PASSWORD}"
-    devpi index -y -c public pypi_whitelist='*'
     devpi logoff
-    devpi-server --stop
-    devpi-server --status
+    devpi-server --stop --host "$DEVPI_LISTEN_HOST" --port "$DEVPI_PORT" $@
+    devpi-server --status --host "$DEVPI_LISTEN_HOST" --port "$DEVPI_PORT" $@
     
     if [[ "$KEEP_CLIENT" == "false" ]]; then
         print ""
@@ -91,16 +91,14 @@ initialize() {
 
 start_devpi_server() {
     if ! [[ -f "$DEVPISERVER_SERVERDIR/.serverversion" ]]; then
-        initialize
+        initialize $@
     fi
     print ""
     print "=> Starting server..."
     if [ $# -gt 0 ]; then
-        print "good"
-        exec devpi-server --restrict-modify root --host "$DEVPI_HOST" --port "$DEVPI_PORT" $@
+        exec devpi-server --restrict-modify root --host "$DEVPI_LISTEN_HOST" --port "$DEVPI_PORT" $@
     else
-        print "bad"
-        exec devpi-server --restrict-modify root --host "$DEVPI_HOST" --port "$DEVPI_PORT"
+        exec devpi-server --restrict-modify root --host "$DEVPI_LISTEN_HOST" --port "$DEVPI_PORT"
     fi
 }
 
