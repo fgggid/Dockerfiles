@@ -1,12 +1,12 @@
 #!/bin/sh
 
 defaults() {
-    : ${DEVPI_SERVERDIR="/data/server"}
+    : ${DEVPISERVER_SERVERDIR="/data/server"}
     : ${DEVPI_CLIENTDIR="/data/client"}
     : ${DEVPI_HOST="0.0.0.0"}
     : ${DEVPI_PORT=3141}
 
-    export DEVPI_SERVERDIR \
+    export DEVPISERVER_SERVERDIR \
         DEVPI_CLIENTDIR \
         DEVPI_HOST \
         DEVPI_PORT
@@ -46,7 +46,7 @@ Container Usage:
 
         DEVPI_PASSWORD:         Password for the root devpi user (default '')
         DEVPI_PORT:             Port the server listens on. (default 3141)
-        DEVPI_SERVERDIR:        Directory to store server information to. (default /data)
+        DEVPISERVER_SERVERDIR:  Directory to store server information to. (default /data)
         DEVPI_CLIENTDIR:        Directory to store client information to. (default /data)
 
 Devpi-Server Usage:
@@ -90,14 +90,16 @@ initialize() {
 }
 
 start_devpi_server() {
-    if ! [[ -f "$DEVPI_SERVERDIR/.serverversion" ]]; then
+    if ! [[ -f "$DEVPISERVER_SERVERDIR/.serverversion" ]]; then
         initialize
     fi
     print ""
     print "=> Starting server..."
-    if [[ "$@" != "" ]]; then
-        exec devpi-server --restrict-modify root --host "$DEVPI_HOST" --port "$DEVPI_PORT" "$@"
+    if [ $# -gt 0 ]; then
+        print "good"
+        exec devpi-server --restrict-modify root --host "$DEVPI_HOST" --port "$DEVPI_PORT" $@
     else
+        print "bad"
         exec devpi-server --restrict-modify root --host "$DEVPI_HOST" --port "$DEVPI_PORT"
     fi
 }
@@ -142,7 +144,7 @@ main() {
                     ;;
                 *)
                     if [[ "$args" != "" ]]; then
-                        args="$1 $args"
+                        args="$args $1"
                     else
                         args="$1"
                     fi
@@ -151,7 +153,7 @@ main() {
             shift
         done
 
-        start_devpi_server "$args"
+        start_devpi_server $args
     fi
 }
 

@@ -1,12 +1,14 @@
-FROM mhoush/py3
-MAINTAINER https://github.com/m-housh
+FROM py3:latest
 
-ARG DEVPI_VERSION=4.0.0
-
-ENV DEVPI_VERSION $DEVPI_VERSION
+RUN apk add --virtual build-dependencies \
+    build-base \
+    gcc \
+    libffi-dev \
+    python3-dev && \
+    rm -rf /var/cache/apk/*
 
 RUN pip install --no-cache-dir --upgrade --ignore-installed \
-        "devpi-server==$DEVPI_VERSION" &&\
+    devpi-server && \
     rm -rf /root/.cache
 
 COPY entrypoint.sh /
