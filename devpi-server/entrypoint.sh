@@ -58,7 +58,7 @@ initialize() {
     if [[ "$CLIENT_INSTALLED" == "false" ]]; then
         print ""
         print "=> Installing devpi-client to initialize server"
-        pip install -q --no-cache-dir --ignore-installed --upgrade \
+        pip install -q --no-cache-dir --ignore-installed \
             devpi-client
     fi
 
@@ -125,12 +125,12 @@ main() {
                 -w | --web )
                     print ""
                     print "=> Installing devpi-web..."
-                    pip install --no-cache-dir --upgrade devpi-web
+                    pip install --no-cache-dir devpi-web
                     ;;
                 -c | --client )
                     print ""
                     print "=> Installing devpi-client..."
-                    pip install --no-cache-dir --upgrade devpi-client
+                    pip install --no-cache-dir devpi-client
                     CLIENT_INSTALLED="true"
                     KEEP_CLIENT="true"
                     ;;
