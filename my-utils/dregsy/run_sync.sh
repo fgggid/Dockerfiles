@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # change below as you need
-CFG_FILE=/root/dregsy/config.yaml
+CFG_FILE=$(realpath ./config.yaml)
 TAG=queens
 
 if [ ! "x$1" = "x" ]; then
@@ -10,6 +10,8 @@ if [ ! "x$1" = "x" ]; then
 #    echo $CFG_FILE
 #    exit
 fi
+
+set -e
 
 # make config
 grep -L "tags: \['$TAG'\]" $CFG_FILE || sed -i.old "s/tags: \[.*/tags: ['$TAG']/" $CFG_FILE
