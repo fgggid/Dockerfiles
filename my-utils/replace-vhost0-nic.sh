@@ -7,6 +7,7 @@ else
     DBG_OUT=
 fi
 
+BACKUP_DIR=/etc/sysconfig/network-scripts/bak
 CONTRAIL_DIR=/etc/contrail
 
 ### input check
@@ -21,11 +22,15 @@ NEW_VTEP_IP=$(grep IPADDR ${NEW_NIC_CFG} | awk -F '=' '{print $2}')
 NEW_PATTERN=$(echo ${NEW_VTEP_IP} | awk -F '.' '{print $1 "." $2 "." $3 "."}')
 
 ### sanity check
-## 1. get old VTEP_IP
+## 1. get old BIND_INT
+OLD_NIC=$(grep BIND_INT ${OLD_VHOST0_CFG} | awk -F '=' '{print $2}')
+OLD_NIC_CFG=/etc/sysconfig/network-scripts/ifcfg-${OLD_NIC}
+
+## 2. get old VTEP_IP
 OLD_VTEP_IP=$(grep VROUTER_GATEWAY /etc/contrail/common_vrouter.env | awk -F '=' '{print $2}')
 OLD_PATTERN=$(echo ${OLD_VTEP_IP} | awk -F '.' '{print $1 "." $2 "." $3 "."}')
 
-## 2. get old VTEP prefix/netmask, make sure it is /24
+## 3. get old VTEP prefix/netmask, make sure it is /24
 if [ ! -f ${OLD_VHOST0_CFG} ]; then
     echo You don\'t have old vhost0 config
     exit 1
@@ -37,14 +42,15 @@ OLD_PREFIX=${OLD_PREFIX:-24}
 # netmask
 OLD_NETMASK=$(grep NETMASK ${OLD_VHOST0_CFG} | awk -F '=' '{print $2}')
 OLD_NETMASK=${OLD_NETMASK:-255.255.255.0}
-echo OLD_PREFIX=${OLD_PREFIX}
-echo OLD_NETMASK=${OLD_NETMASK}
+#echo OLD_PREFIX=${OLD_PREFIX}
+#echo OLD_NETMASK=${OLD_NETMASK}
 if [ "$OLD_PREFIX" != "24" ] || [ "${OLD_NETMASK}" != "255.255.255.0" ]; then
     echo vhost0 prefix is NOT 24, it is not supported, please revise script.
     exit 1
 fi
 
-## x. display all info
+### display all info
+echo OLD_NIC=${OLD_NIC}
 echo NEW_NIC=${NEW_NIC}
 echo OLD_VTEP_IP=${OLD_VTEP_IP}
 echo NEW_VTEP_IP=${NEW_VTEP_IP}
@@ -54,7 +60,6 @@ echo NEW_PATTERN=${NEW_PATTERN}
 if [ ${DEBUG} -ne 0 ]; then
     echo -e "\nIn DEBUG mode!!! Will not do anything, just print what commands will do."
 fi
-
 while true; do
     read -p "Please check above parameters, are you sure to change NIC of vhost0? " yn
     case $yn in
@@ -77,7 +82,19 @@ if [ "${OLD_PATTERN}" != "${NEW_PATTERN}" ]; then
         ## real replace
         grep -r "VROUTER_GATEWAY=${OLD_PATTERN}" $CONTRAIL_DIR | awk -F ':' '{print $1}' | xargs -r -n1 sed -i "s@VROUTER_GATEWAY=${OLD_PATTERN}@VROUTER_GATEWAY=${NEW_PATTERN}@g"
     fi
+else
+    ## IP is same, we need to down old nic, and bring up new nic
+    ${DBG_OUT} ifdown ${OLD_NIC}
+    ${DBG_OUT} ifup ${NEW_NIC}
 fi
+
+### backup old nic cfg
+if [ ! -d ${BACKUP_DIR} ]; then
+    ${DBG_OUT} mkdir -p ${BACKUP_DIR}
+fi
+${DBG_OUT} mv -f ${OLD_NIC_CFG} ${BACKUP_DIR}
+echo ${OLD_NIC_CFG} is moved to ${BACKUP_DIR}.
+echo if you don\'t use ${OLD_NIC}, you can: ip link set ${OLD_NIC} down
 
 ${DBG_OUT} pushd /etc/contrail/vrouter && \
 ${DBG_OUT} docker-compose up -d && \
