@@ -78,9 +78,11 @@ if [ "${OLD_PATTERN}" != "${NEW_PATTERN}" ]; then
     if [ ${DEBUG} -ne 0 ]; then
         ## debug output
         grep -r "VROUTER_GATEWAY=${OLD_PATTERN}" $CONTRAIL_DIR | awk -F ':' '{print $1}' | xargs -r -n1 sed "s@VROUTER_GATEWAY=${OLD_PATTERN}@VROUTER_GATEWAY=${NEW_PATTERN}@g" | grep VROUTER_GATEWAY=
+        grep -r "PHYSICAL_INTERFACE=${OLD_NIC}" $CONTRAIL_DIR | awk -F ':' '{print $1}' | xargs -r -n1 sed "s@PHYSICAL_INTERFACE=${OLD_NIC}@PHYSICAL_INTERFACE=${NEW_NIC}@g" | grep PHYSICAL_INTERFACE=
     else
         ## real replace
         grep -r "VROUTER_GATEWAY=${OLD_PATTERN}" $CONTRAIL_DIR | awk -F ':' '{print $1}' | xargs -r -n1 sed -i "s@VROUTER_GATEWAY=${OLD_PATTERN}@VROUTER_GATEWAY=${NEW_PATTERN}@g"
+        grep -r "PHYSICAL_INTERFACE=${OLD_NIC}" $CONTRAIL_DIR | awk -F ':' '{print $1}' | xargs -r -n1 sed -i "s@PHYSICAL_INTERFACE=${OLD_NIC}@PHYSICAL_INTERFACE=${NEW_NIC}@g"
     fi
 else
     ## IP is same, we need to down old nic, and bring up new nic
