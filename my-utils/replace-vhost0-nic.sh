@@ -25,6 +25,10 @@ NEW_PATTERN=$(echo ${NEW_VTEP_IP} | awk -F '.' '{print $1 "." $2 "." $3 "."}')
 ## 1. get old BIND_INT
 OLD_NIC=$(grep BIND_INT ${OLD_VHOST0_CFG} | awk -F '=' '{print $2}')
 OLD_NIC_CFG=/etc/sysconfig/network-scripts/ifcfg-${OLD_NIC}
+if [ "${OLD_NIC}" = "${NEW_NIC}" ]; then
+    echo You don\'t change NIC, exit!!!
+    exit 1
+fi
 
 ## 2. get old VTEP_IP
 OLD_VTEP_IP=$(grep VROUTER_GATEWAY /etc/contrail/common_vrouter.env | awk -F '=' '{print $2}')
@@ -78,11 +82,9 @@ if [ "${OLD_PATTERN}" != "${NEW_PATTERN}" ]; then
     if [ ${DEBUG} -ne 0 ]; then
         ## debug output
         grep -r "VROUTER_GATEWAY=${OLD_PATTERN}" $CONTRAIL_DIR | awk -F ':' '{print $1}' | xargs -r -n1 sed "s@VROUTER_GATEWAY=${OLD_PATTERN}@VROUTER_GATEWAY=${NEW_PATTERN}@g" | grep VROUTER_GATEWAY=
-        grep -r "PHYSICAL_INTERFACE=${OLD_NIC}" $CONTRAIL_DIR | awk -F ':' '{print $1}' | xargs -r -n1 sed "s@PHYSICAL_INTERFACE=${OLD_NIC}@PHYSICAL_INTERFACE=${NEW_NIC}@g" | grep PHYSICAL_INTERFACE=
     else
         ## real replace
         grep -r "VROUTER_GATEWAY=${OLD_PATTERN}" $CONTRAIL_DIR | awk -F ':' '{print $1}' | xargs -r -n1 sed -i "s@VROUTER_GATEWAY=${OLD_PATTERN}@VROUTER_GATEWAY=${NEW_PATTERN}@g"
-        grep -r "PHYSICAL_INTERFACE=${OLD_NIC}" $CONTRAIL_DIR | awk -F ':' '{print $1}' | xargs -r -n1 sed -i "s@PHYSICAL_INTERFACE=${OLD_NIC}@PHYSICAL_INTERFACE=${NEW_NIC}@g"
     fi
 else
     ## IP is same, we need to down old nic, and bring up new nic
@@ -90,13 +92,20 @@ else
     ${DBG_OUT} ifup ${NEW_NIC}
 fi
 
+if [ ${DEBUG} -ne 0 ]; then
+    ## debug output
+    grep -r "PHYSICAL_INTERFACE=${OLD_NIC}" $CONTRAIL_DIR | awk -F ':' '{print $1}' | xargs -r -n1 sed "s@PHYSICAL_INTERFACE=${OLD_NIC}@PHYSICAL_INTERFACE=${NEW_NIC}@g" | grep PHYSICAL_INTERFACE=
+else
+    ## real replace
+    grep -r "PHYSICAL_INTERFACE=${OLD_NIC}" $CONTRAIL_DIR | awk -F ':' '{print $1}' | xargs -r -n1 sed -i "s@PHYSICAL_INTERFACE=${OLD_NIC}@PHYSICAL_INTERFACE=${NEW_NIC}@g"
+fi
+
 ### backup old nic cfg
 if [ ! -d ${BACKUP_DIR} ]; then
     ${DBG_OUT} mkdir -p ${BACKUP_DIR}
 fi
 ${DBG_OUT} mv -f ${OLD_NIC_CFG} ${BACKUP_DIR}
-echo ${OLD_NIC_CFG} is moved to ${BACKUP_DIR}.
-echo if you don\'t use ${OLD_NIC}, you can: ip link set ${OLD_NIC} down
+echo ${OLD_NIC_CFG} is moved to ${BACKUP_DIR} .
 
 ${DBG_OUT} pushd /etc/contrail/vrouter && \
 ${DBG_OUT} docker-compose up -d && \
