@@ -31,7 +31,7 @@ if [ "${OLD_NIC}" = "${NEW_NIC}" ]; then
 fi
 
 ## 2. get old VTEP_IP
-OLD_VTEP_IP=$(grep VROUTER_GATEWAY /etc/contrail/common_vrouter.env | awk -F '=' '{print $2}')
+OLD_VTEP_IP=$(grep IPADDR ${OLD_NIC_CFG} | awk -F '=' '{print $2}')
 OLD_PATTERN=$(echo ${OLD_VTEP_IP} | awk -F '.' '{print $1 "." $2 "." $3 "."}')
 
 ## 3. get old VTEP prefix/netmask, make sure it is /24
@@ -41,14 +41,14 @@ if [ ! -f ${OLD_VHOST0_CFG} ]; then
 fi
 
 # prefix
-OLD_PREFIX=$(grep PREFIX ${OLD_VHOST0_CFG} | awk -F '=' '{print $2}')
+OLD_PREFIX=$(grep PREFIX ${OLD_VHOST0_CFG} | awk -F '=' '{print $2}' | xargs)
 OLD_PREFIX=${OLD_PREFIX:-24}
 # netmask
-OLD_NETMASK=$(grep NETMASK ${OLD_VHOST0_CFG} | awk -F '=' '{print $2}')
+OLD_NETMASK=$(grep NETMASK ${OLD_VHOST0_CFG} | awk -F '=' '{print $2}' | xargs)
 OLD_NETMASK=${OLD_NETMASK:-255.255.255.0}
 #echo OLD_PREFIX=${OLD_PREFIX}
 #echo OLD_NETMASK=${OLD_NETMASK}
-if [ "$OLD_PREFIX" != "24" ] || [ "${OLD_NETMASK}" != "255.255.255.0" ]; then
+if [ "${OLD_PREFIX}" != "24" ] || [ "${OLD_NETMASK}" != "255.255.255.0" ]; then
     echo vhost0 prefix is NOT 24, it is not supported, please revise script.
     exit 1
 fi
