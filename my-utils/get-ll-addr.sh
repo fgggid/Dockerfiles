@@ -11,9 +11,9 @@ rt --dump 0 | egrep "^169\.254\." | awk -v NH="$FILTER_OUT_NH" '{ \
         "vif -g " OIF " | grep IP6addr | awk \"{print \\$1}\" | cut -d: -f2-" | getline IP6; \
         "vif -g " OIF " | grep ^vif | awk \"{print \\$3}\"" | getline DEV; \
         if (length(IP6) == 0) { \
-            print HOST " NIC:" DEV " V4:" IP4; \
+            printf "%-15s NIC:%s V4:%s\n", HOST, DEV, IP4; \
         } else { \
-            print HOST " NIC:" DEV " V6:" IP6; \
+            printf "%-15s NIC:%s V6:%s\n", HOST, DEV, IP6; \
         } \
     } \
 }'
