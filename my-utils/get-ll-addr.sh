@@ -10,10 +10,12 @@ rt --dump 0 | egrep "^169\.254\." | awk -v NH="$FILTER_OUT_NH" '{ \
         "vif -g " OIF " | grep IPaddr | awk \"{print \\$3}\" | cut -d: -f2-" | getline IP4; \
         "vif -g " OIF " | grep IP6addr | awk \"{print \\$1}\" | cut -d: -f2-" | getline IP6; \
         "vif -g " OIF " | grep ^vif | awk \"{print \\$3}\"" | getline DEV; \
+        "vif -g " OIF " | grep ^vif | awk \"{print \\$1}\" | cut -d/ -f2" | getline VIF; \
+        "vif -g " OIF " | grep Vrf | awk \"{print \\$1}\" | cut -d: -f2" | getline VRF; \
         if (length(IP6) == 0) { \
-            printf "%-15s NIC:%s V4:%s\n", HOST, DEV, IP4; \
+            printf "%-15s NIC:%s V4:%-39s\tVRF:%s VIF:%s\n", HOST, DEV, IP4, VRF, VIF; \
         } else { \
-            printf "%-15s NIC:%s V6:%s\n", HOST, DEV, IP6; \
+            printf "%-15s NIC:%s V6:%-39s\tVRF:%s VIF:%s\n", HOST, DEV, IP6, VRF, VIF; \
         } \
     } \
 }'
