@@ -1,8 +1,17 @@
 #!/bin/sh
 
-FILTER_OUT_NH="$(rt --dump 0 | egrep "^169\.254\.0\.0" | awk '{print $5}')"
+if [ "x$1" != "x" ]; then
+    docker cp `realpath $0` vrouter_vrouter-agent_1:/tmp/get-ll-addr.sh
+    echo exec in docker
+    docker exec vrouter_vrouter-agent_1 sh -c 'sed -i "s/^    CMD_EXEC=.*$/    CMD_EXEC=/g" /tmp/get-ll-addr.sh; /tmp/get-ll-addr.sh'
+    exit 0
+else
+    CMD_EXEC="docker exec vrouter_vrouter-agent_1"
+fi
 
-LINES=`rt --dump 0 | egrep "^169\.254\." | awk -v FNH="$FILTER_OUT_NH" '{ if ($5 != FNH) { print } }'`
+FILTER_OUT_NH=`$CMD_EXEC rt --dump 0 | egrep "^169\.254\.0\.0" | awk '{print $5}'`
+
+LINES=`$CMD_EXEC rt --dump 0 | egrep "^169\.254\." | awk -v FNH="$FILTER_OUT_NH" '{ if ($5 != FNH) { print } }'`
 
 echo "$LINES" |
 while IFS= read -r line
@@ -13,7 +22,7 @@ do
     fi
     HOST=`echo $line | cut -d/ -f1`
     IP6=""
-    OIF=`nh --get $NH | grep Oif | awk '{print $2}' | cut -d: -f2`
+    OIF=`$CMD_EXEC nh --get $NH | grep Oif | awk '{print $2}' | cut -d: -f2`
     OIF_INFO=`vif -g $OIF`
     IP4=`echo "$OIF_INFO" | grep IPaddr | awk '{print $3}' | cut -d: -f2-`
     IP6=`echo "$OIF_INFO" | grep IP6addr | awk '{print $1}' | cut -d: -f2-`
