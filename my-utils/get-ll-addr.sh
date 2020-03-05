@@ -21,6 +21,7 @@ do
         continue
     fi
     HOST=`echo $line | cut -d/ -f1`
+    IP4=""
     IP6=""
     OIF=`$CMD_EXEC nh --get $NH | grep Oif | awk '{print $2}' | cut -d: -f2`
     OIF_INFO=`vif -g $OIF`
@@ -29,9 +30,5 @@ do
     DEV=`echo "$OIF_INFO" | grep ^vif | awk '{print $3}'`
     VIF=`echo "$OIF_INFO" | grep ^vif | awk '{print $1}' | cut -d/ -f2`
     VRF=`echo "$OIF_INFO" | grep Vrf | awk '{print $1}' | cut -d: -f2`
-    if [ "x$IP6" = "x" ]; then
-        printf "%-15s NIC:%s V4:%-39s\tVRF:%s VIF:%s\n" $HOST $DEV $IP4 $VRF $VIF
-    else
-        printf "%-15s NIC:%s V6:%-39s\tVRF:%s VIF:%s\n" $HOST $DEV $IP6 $VRF $VIF
-    fi
+    printf "%-15s NIC:%s VRF:%-4s VIF:%-4s V4:%-16s V6:%-39s\n" $HOST $DEV $VRF $VIF $IP4 $IP6
 done
