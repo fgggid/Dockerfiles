@@ -30,5 +30,5 @@ do
     DEV=`echo "$OIF_INFO" | grep ^vif | awk '{print $3}'`
     VIF=`echo "$OIF_INFO" | grep ^vif | awk '{print $1}' | cut -d/ -f2`
     VRF=`echo "$OIF_INFO" | grep Vrf | awk '{print $1}' | cut -d: -f2`
-    printf "%-15s NIC:%s VRF:%-4s VIF:%-4s V4:%-16s V6:%-39s\n" $HOST $DEV $VRF $VIF $IP4 $IP6
+    printf "%-15s NIC:%-16s VRF:%-4s VIF:%-4s V4:%-16s V6:%-39s\n" $HOST $DEV $VRF $VIF $IP4 $IP6
 done
