@@ -1,11 +1,11 @@
 #!/bin/sh
 
-export Register=http://172.18.18.1:6666
+export Register=http://10.130.176.11:6666
 export cLink="/v2/_catalog?n=10"
 export cFile=/tmp/.docker.register.catalog
 export tFile=/tmp/.docker.register.tags
 export wgetC="wget -O- -q -S "
-tag=alfred-dev
+tag=will
 # Usage with user/password
 # export wgetC="wget -O- -q -S --user=ondra --password=heslo "
 
