@@ -6,4 +6,4 @@ docker run -d --name devpi-server \
     -v "${PWD}/data":/data \
     -p "3141:3141" \
     --restart always \
-    devpi-server:latest --web --role replica --master-url http://10.192.13.87:3141
+    devpi-server:latest --web --role replica --master-url http://178.104.163.176:3141
