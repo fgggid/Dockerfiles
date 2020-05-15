@@ -2861,17 +2861,15 @@ class DatabaseCleaner(DatabaseManager):
                 try:
                     obj_uuid_table.get(obj_uuid)
                 except pycassa.NotFoundException:
-                    logger.info("Found stale fq_name index entry: %s",
-                                obj_uuid)
                     stale_cols.append(obj_id)
 
             if stale_cols:
                 if not self._args.execute:
-                    logger.info("Would removed stale %s shared id: %s",
-                                obj_type, stale_cols)
+                    logger.info("Would removed stale %s shared id: %d",
+                                obj_type, len(stale_cols))
                 else:
-                    logger.info("Removing stale %s fq_names: %s", obj_type,
-                                stale_cols)
+                    logger.info("Removing stale %s shared id: %d", obj_type,
+                                len(stale_cols))
                     shared_table.remove(obj_type, columns=stale_cols)
 
         # TODO do same for zookeeper

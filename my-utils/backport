@@ -1,0 +1,21 @@
+#!/bin/sh
+
+STABLE=kui
+BUILDPLACE=/var/cache/pbuilder/cow.build
+
+if [ "x$1" = "x" ]; then
+    echo You must specify .dsc file
+    exit 0
+fi
+    
+#    --debbuildopts "-J$(nproc)" \
+
+mkdir -p $BUILDPLACE
+
+echo '*** building ... ***'
+cowbuilder --build $1 \
+    --othermirror "deb [trusted=yes] file:///usr/src/backports/$STABLE ./" --override-config \
+    --buildplace $BUILDPLACE \
+    --buildresult /usr/src/backports/$STABLE/ \
+    --bindmounts /usr/src/backports/$STABLE/ \
+    --hookdir /usr/src/backports/$STABLE/

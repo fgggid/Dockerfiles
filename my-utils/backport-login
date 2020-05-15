@@ -1,0 +1,14 @@
+#!/bin/sh
+
+STABLE=kui
+BUILDPLACE=/var/cache/pbuilder/cow.build
+
+mkdir -p $BUILDPLACE
+
+echo '*** login cow-shell ... ***'
+cowbuilder --login \
+    --othermirror "deb [trusted=yes] file:///usr/src/backports/$STABLE ./" --override-config \
+    --buildplace $BUILDPLACE \
+    --buildresult /usr/src/backports/$STABLE/ \
+    --bindmounts /usr/src/backports/$STABLE/ \
+    --hookdir /usr/src/backports/$STABLE/ $@

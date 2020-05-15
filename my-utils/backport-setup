@@ -1,0 +1,25 @@
+#!/bin/sh
+
+STABLE=kui
+
+# Prepare local repo
+mkdir -p /usr/src/backports/$STABLE/
+touch /usr/src/backports/$STABLE/Packages
+cat <<EOF > /usr/src/backports/$STABLE/Release
+NotAutomatic: yes
+ButAutomaticUpgrades: yes
+Date: $(date -R -u)
+EOF
+cat <<EOF > /usr/src/backports/$STABLE/D70update
+#!/bin/bash
+# Take previous builds into account
+apt update
+EOF
+chmod 755 /usr/src/backports/$STABLE/D70update
+cat <<EOF > /usr/src/backports/$STABLE/I70scanpackages
+#!/bin/bash
+# Update repo after successful build
+cd /usr/src/backports/$STABLE/
+dpkg-scanpackages . /dev/null > Packages
+EOF
+chmod 755 /usr/src/backports/$STABLE/I70scanpackages
