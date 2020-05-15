@@ -1,0 +1,9 @@
+#!/bin/sh
+#set -x
+STABLE=kui
+
+SCRIPT_PATH=$(dirname $0)
+LOGIN_SCRIPT=$SCRIPT_PATH/backport-login
+$LOGIN_SCRIPT \
+    --othermirror "deb [trusted=yes] file:///usr/src/backports/$STABLE ./" --override-config \
+    $@

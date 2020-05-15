@@ -1,0 +1,7 @@
+#!/bin/sh
+
+SCRIPT_PATH=$(dirname $0)
+LOGIN_SCRIPT=$SCRIPT_PATH/backport-login
+$LOGIN_SCRIPT \
+    --override-config \
+    $@
