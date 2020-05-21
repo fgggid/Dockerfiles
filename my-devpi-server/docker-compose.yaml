@@ -1,0 +1,11 @@
+devpi-server:
+  image: devpi-server:latest
+  restart: always
+  volumes:
+   - /root/arsdn_repo/devpi:/data
+  ports:
+   - "3141:3141"
+  environment:
+   - DEVPI_PASSWORD=huayun
+   - DEVPI_HOST=178.104.163.176
+  command: --web --role master
