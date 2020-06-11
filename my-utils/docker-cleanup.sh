@@ -8,4 +8,4 @@ docker ps --format "{{.ID}} {{.Names}}" -af status=exited | egrep -v '\-code|rpm
 docker images -qf dangling=true | xargs -r docker rmi
 
 # garbage collect in registry_sdn
-#docker exec registry_sdn registry garbage-collect /etc/docker/registry/config.yml
+docker exec registry_sdn registry garbage-collect /etc/docker/registry/config.yml --delete-untagged=true > /dev/null
