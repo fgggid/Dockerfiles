@@ -18,20 +18,20 @@ if [ ! -f ${NEW_NIC_CFG} ] || [ "${NEW_NIC}" = "vhost0" ]; then
     echo No config file found, please input a proper NIC name!!!
     exit 1
 fi
-NEW_VTEP_IP=$(grep IPADDR ${NEW_NIC_CFG} | awk -F '=' '{print $2}')
+NEW_VTEP_IP=$(grep IPADDR ${NEW_NIC_CFG} | awk -F '=' '{print $2}' | xargs)
 NEW_PATTERN=$(echo ${NEW_VTEP_IP} | awk -F '.' '{print $1 "." $2 "." $3 "."}')
 
 ### sanity check
 ## 1. new VTEP IP check
 IP_RE='^(0*(1?[0-9]{1,2}|2([0-4][0-9]|5[0-5]))\.){3}'
  IP_RE+='0*(1?[0-9]{1,2}|2([0-4][0-9]|5[0-5]))$'
-if [[ ! ${NEW_VTEP_IP} =~ $IP_RE ]] then
+if [[ ! ${NEW_VTEP_IP} =~ $IP_RE ]]; then
     echo New VTEP IP: ${NEW_VTEP_IP} is not valid!
     exit 1
 fi
 
 ## 2. get old BIND_INT
-OLD_NIC=$(grep BIND_INT ${OLD_VHOST0_CFG} | awk -F '=' '{print $2}')
+OLD_NIC=$(grep BIND_INT ${OLD_VHOST0_CFG} | awk -F '=' '{print $2}' | xargs)
 OLD_NIC_CFG=/etc/sysconfig/network-scripts/ifcfg-${OLD_NIC}
 
 if [ ! -f ${OLD_NIC_CFG} ]; then
@@ -45,7 +45,7 @@ if [ "${OLD_NIC}" = "${NEW_NIC}" ]; then
 fi
 
 ## 3. get old VTEP_IP
-OLD_VTEP_IP=$(grep IPADDR ${OLD_NIC_CFG} | awk -F '=' '{print $2}')
+OLD_VTEP_IP=$(grep IPADDR ${OLD_NIC_CFG} | awk -F '=' '{print $2}' | xargs)
 OLD_PATTERN=$(echo ${OLD_VTEP_IP} | awk -F '.' '{print $1 "." $2 "." $3 "."}')
 
 ## 4. get old VTEP prefix/netmask, make sure it is /24
