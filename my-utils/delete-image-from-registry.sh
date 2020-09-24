@@ -5,9 +5,15 @@ export cLink="/v2/_catalog?n=10"
 export cFile=/tmp/.docker.register.catalog
 export tFile=/tmp/.docker.register.tags
 export wgetC="wget -O- -q -S "
-tag=will
+tag=$1
 # Usage with user/password
 # export wgetC="wget -O- -q -S --user=ondra --password=heslo "
+
+if [ "x$tag" = "x" ]; then
+  echo Usage:
+  echo     $0 [tag]
+  exit 0
+fi
 
 function listFullCatalog {
   while true; do

@@ -5,6 +5,7 @@ import argparse
 from builtins import filter
 from builtins import object
 from builtins import str
+from collections import defaultdict
 import copy
 from functools import wraps
 import inspect
@@ -75,12 +76,25 @@ except ImportError:
     from vnc_cfg_ifmap import VncServerCassandraClient
 
 
-__version__ = "1.29"
+__version__ = "1.34"
 """
 NOTE: As that script is not self contained in a python package and as it
 supports multiple Contrail releases, it brings its own version that needs to be
 manually updated each time it is modified. We also maintain a change log list
 in that header:
+* 1.34:
+  - Do not report false positive missing VN for k8s floating ips
+    not in floating ip pool
+* 1.33:
+  - Fix CEM-17261, multiple AE-ID seems allocated due to CEM-17208. Ensure
+    all AE-ID created for a VPG is deleted
+* 1.32:
+  - Fix CEM-17260. Use self._zk_client.delete instead of self.zk_delete as
+    it do not exists.
+* 1.31:
+  - Fix a string comparision bug for Gateway IP String being "None" String
+* 1.30:
+  - Fix for auditing AE ID while using k8s
 * 1.29:
   - Add error msg to inform when aggregated ethernet ID is not supported
 * 1.28:
@@ -1045,6 +1059,11 @@ class DatabaseManager(object):
                             break
 
             if not vn_id:
+                if ip_type == 'floating-ip':
+                    parent_type = json.loads(ip_cols.get('parent_type'))
+                    if parent_type != 'floating-ip-pool':
+                        # This is a k8s-assigned ip and not part of a floating ip pool
+                        continue
                 ret_errors.append(VirtualNetworkMissingError(
                     'Missing VN in %s %s.' % (ip_type, ip_id)))
                 continue
@@ -1069,7 +1088,7 @@ class DatabaseManager(object):
                     continue
                 # gateway not locked on zk, we don't need it
                 gw = cassandra_all_vns[fq_name_str][sn_key]['gw']
-                if (gw and (gw is not 'None')) and \
+                if (gw and (gw != 'None')) and \
                     IPAddress(ip_addr) == IPAddress(gw):
                     break
                 addrs = cassandra_all_vns[fq_name_str][sn_key]['addrs']
@@ -1447,13 +1466,18 @@ class DatabaseManager(object):
         base_path = self.base_ae_id_zk_path
         logger.debug("Doing recursive zookeeper read from %s", base_path)
         zk_all_ae_id = {}
-        for prouter_name in self._zk_client.get_children(base_path) or []:
+        try:
+            prouters_with_ae_id = self._zk_client.get_children(base_path)
+        except kazoo.exceptions.NoNodeError:
+            prouters_with_ae_id = None
+
+        for prouter_name in prouters_with_ae_id or []:
             prouter_path = base_path + '/' + prouter_name
             for ae_id in self._zk_client.get_children(prouter_path) or []:
                 vpg_name = self._zk_client.get(prouter_path + '/' + ae_id)[0]
                 if zk_all_ae_id.get(prouter_name) is None:
-                        zk_all_ae_id[prouter_name] = {}
-                zk_all_ae_id[prouter_name][vpg_name] = ae_id
+                        zk_all_ae_id[prouter_name] = defaultdict(list)
+                zk_all_ae_id[prouter_name][vpg_name].append(ae_id)
 
         # read in aggregated-ethernets from cassandra to get id+fq_name
         fq_name_table = self._cf_dict['obj_fq_name_table']
@@ -1478,7 +1502,7 @@ class DatabaseManager(object):
             if pi_name[:2] == 'ae' and pi_name[2:].isdigit() and \
                     int(pi_name[2:]) < AE_MAX_ID:
                 ae_id = int(pi_name[2:])
-            if ae_id:
+            if ae_id is not None:
                 if cassandra_all_ae_id.get(prouter_name) is None:
                         cassandra_all_ae_id[prouter_name] = {}
                 cassandra_all_ae_id[prouter_name][pi_name] = ae_id
@@ -1486,13 +1510,17 @@ class DatabaseManager(object):
         ae_id_to_remove_from_zk = copy.deepcopy(zk_all_ae_id)
         logger.debug("Getting AE ID which need to be removed from zookeeper")
         for prouter, pi_to_ae_dict in zk_all_ae_id.items():
-            for vpg_name, ae_id_str in pi_to_ae_dict.items():
-                ae_id = int(ae_id_str)
-                if prouter in cassandra_all_ae_id and \
-                        ae_id in cassandra_all_ae_id[prouter].values():
-                    del ae_id_to_remove_from_zk[prouter][vpg_name]
-                    if not ae_id_to_remove_from_zk[prouter]:
-                        del ae_id_to_remove_from_zk[prouter]
+            for vpg_name, ae_id_list in pi_to_ae_dict.items():
+                for ae_id_str in ae_id_list:
+                   ae_id = int(ae_id_str)
+                   if prouter in cassandra_all_ae_id and \
+                           ae_id in cassandra_all_ae_id[prouter].values():
+                       if ae_id_str in ae_id_to_remove_from_zk[prouter][vpg_name]:
+                          ae_id_to_remove_from_zk[prouter][vpg_name].remove(ae_id_str)
+                       if not ae_id_to_remove_from_zk[prouter][vpg_name]:
+                           del ae_id_to_remove_from_zk[prouter][vpg_name]
+                       if not ae_id_to_remove_from_zk[prouter]:
+                           del ae_id_to_remove_from_zk[prouter]
 
         return zk_all_ae_id, cassandra_all_ae_id, ae_id_to_remove_from_zk, \
                ret_errors
@@ -2062,12 +2090,13 @@ class DatabaseChecker(DatabaseManager):
         _, _, ae_id_to_remove_from_zk, ret_errors = \
             self.audit_aggregated_ethernet_id()
         for prouter, pi_to_ae_dict in ae_id_to_remove_from_zk.items():
-            for pi_name, ae_id_str in pi_to_ae_dict.items():
-                ae_id = int(ae_id_str)
-                errmsg = 'Additional AE ID %d in zookeeper (vs.cassandra) ' \
-                         'for virtual port group: %s connected to ' \
-                         'physical router: %s' \
-                         % (ae_id, pi_name, prouter)
+            for pi_name, ae_id_list in pi_to_ae_dict.items():
+                for ae_id_str in ae_id_list:
+                    ae_id = int(ae_id_str)
+                    errmsg = 'Additional AE ID %d in zookeeper (vs.cassandra) ' \
+                             'for virtual port group: %s connected to ' \
+                             'physical router: %s' \
+                             % (ae_id, pi_name, prouter)
                 ret_errors.append(AEIDZookeeperError(errmsg))
         return ret_errors
 
@@ -2833,48 +2862,15 @@ class DatabaseCleaner(DatabaseManager):
         base_path = self.base_ae_id_zk_path
         for prouter, pi_to_ae_dict in ae_id_to_remove_from_zk.items():
             prouter_path = base_path + '/' + prouter
-            for ae_id in pi_to_ae_dict.values():
-                path = prouter_path + '/' + ae_id
-                if not self._args.execute:
-                    logger.info("Would delete zk: %s", path)
-                else:
-                    logger.info("Deleting zk path: %s", path)
-                    self.zk_delete(path)
+            for ae_id_list in pi_to_ae_dict.values():
+                for ae_id in ae_id_list:
+                    path = prouter_path + '/' + ae_id
+                    if not self._args.execute:
+                        logger.info("Would delete zk: %s", path)
+                    else:
+                        logger.info("Deleting zk path: %s", path)
+                        self._zk_client.delete(path)
         return ret_errors
-
-    @cleaner
-    def clean_stale_shared_id(self):
-        """Remove stale shared id which are not in obj_uuid_table."""
-        logger = self._logger
-        ret_errors = []
-
-        shared_table = self._cf_dict['obj_shared_table']
-        obj_uuid_table = self._cf_dict['obj_uuid_table']
-        logger.debug("Reading all objects from obj_shared_table")
-        iterator = shared_table.get_range(column_count=1)
-        for obj_type, _ in iterator:
-            logger.debug("obj_type: %s", obj_type)
-            stale_cols = []
-            for obj_id, _ in shared_table.xget(obj_type):
-                obj_uuid = obj_id.split(':')[-1]
-                logger.debug("obj_uuid: %s", obj_uuid)
-                try:
-                    obj_uuid_table.get(obj_uuid)
-                except pycassa.NotFoundException:
-                    stale_cols.append(obj_id)
-
-            if stale_cols:
-                if not self._args.execute:
-                    logger.info("Would removed stale %s shared id: %d",
-                                obj_type, len(stale_cols))
-                else:
-                    logger.info("Removing stale %s shared id: %d", obj_type,
-                                len(stale_cols))
-                    shared_table.remove(obj_type, columns=stale_cols)
-
-        # TODO do same for zookeeper
-        return ret_errors
-
 
 
 class DatabaseHealer(DatabaseManager):
