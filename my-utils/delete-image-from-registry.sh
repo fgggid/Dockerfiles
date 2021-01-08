@@ -1,10 +1,10 @@
 #!/bin/sh
 
-export Register=http://10.130.176.11:6666
+export Register=https://10.130.176.11:6666
 export cLink="/v2/_catalog?n=10"
 export cFile=/tmp/.docker.register.catalog
 export tFile=/tmp/.docker.register.tags
-export wgetC="wget -O- -q -S "
+export wgetC="wget -O- -q -S --no-check-certificate"
 tag=$1
 # Usage with user/password
 # export wgetC="wget -O- -q -S --user=ondra --password=heslo "
@@ -31,8 +31,8 @@ function deleteByTag {
   cat - | while read image; do
     tLink="/v2/${image}/tags/list?n=10"
     while true; do
-      curl -v -sSL -X DELETE "${Register}/v2/${image}/manifests/$(
-        curl -sSL -I \
+      curl -vksSL -X DELETE "${Register}/v2/${image}/manifests/$(
+        curl -ksSL -I \
           -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
           "${Register}/v2/${image}/manifests/${tag}" \
         | awk '$1 == "Docker-Content-Digest:" { print $2 }' \
