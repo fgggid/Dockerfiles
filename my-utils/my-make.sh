@@ -15,7 +15,7 @@ TARGET=$1
 shift
 {
     exec 3>&1    # Save the current stdout (the cat pipe)
-    time make -O ${TARGET} $@ SRCVER=${MY_VER} BUILDTAG=${MY_VER} 2>&1 1>&3 | tee /tmp/err.log
+    make -O ${TARGET} $@ SRCVER=${MY_VER} BUILDTAG=${MY_VER} 2>&1 1>&3 | tee /tmp/err.log
 } | cat > temp/${TARGET}.log
 set +x
 
