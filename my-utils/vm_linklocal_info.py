@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 __author__ = "Ameen Ali - @rootameen"
 
 import xml.etree.ElementTree as ET
